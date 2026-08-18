@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SpiderLearn // Developer Dashboard</title>
+  <meta name="description" content="Spiderman-themed developer learning dashboard and course management platform." />
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="spiderman-theme">
+  <!-- Subtle Web Particle Canvas -->
+  <canvas id="webCanvas" class="web-canvas"></canvas>
+  <div class="ambient-glow glow-red"></div>
+  <div class="ambient-glow glow-cyan"></div>
+
+  <div class="app-layout">
+    
+    <!-- ====================================================================
+         LEFT SIDEBAR (MATCHING SCREENSHOT WITH SPIDER-MAN ACCENTS)
+         ==================================================================== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-inner-top">
+        <!-- Logo / Brand (A Circle + AdapLearn in Spiderman Theme) -->
+        <a href="#" class="sidebar-brand" onclick="switchTab('dashboard')">
+          <div class="brand-avatar-circle">
+            <span>🕷️</span>
+          </div>
+          <span class="brand-name">Spider<span class="text-red">Learn</span></span>
+        </a>
+
+        <!-- Sidebar Navigation Menu -->
+        <nav class="sidebar-nav">
+          <!-- 1. Dashboard -->
+          <button class="nav-item active" id="nav-dashboard" onclick="switchTab('dashboard')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+              <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+              <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+              <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+            </svg>
+            <span>Dashboard</span>
+          </button>
+
+          <!-- 2. Courses -->
+          <button class="nav-item" id="nav-courses" onclick="switchTab('courses')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="20" x2="18" y2="10"/>
+              <line x1="12" y1="20" x2="12" y2="4"/>
+              <line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            <span>Courses</span>
+          </button>
+
+          <!-- 3. My Learning -->
+          <button class="nav-item" id="nav-learning" onclick="switchTab('learning')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+              <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+            </svg>
+            <span>My Learning</span>
+          </button>
+
+          <!-- 4. Projects -->
+          <button class="nav-item" id="nav-projects" onclick="switchTab('projects')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+              <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+              <path d="M2 2l7.586 7.586"/>
+            </svg>
+            <span>Projects</span>
+          </button>
+
+          <!-- 5. Interview Prep -->
+          <button class="nav-item" id="nav-interview" onclick="switchTab('interview')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span>Interview Prep</span>
+          </button>
+
+          <!-- 6. Enterprise -->
+          <button class="nav-item" id="nav-enterprise" onclick="switchTab('enterprise')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 21h18M3 7v14M21 7v14M6 7V3h12v4M9 21v-4h6v4"/>
+            </svg>
+            <span>Enterprise</span>
+          </button>
+
+          <!-- 7. Analytics -->
+          <button class="nav-item" id="nav-analytics" onclick="switchTab('analytics')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 3v18h18"/>
+              <path d="m19 9-5 5-4-4-3 3"/>
+            </svg>
+            <span>Analytics</span>
+          </button>
+
+          <!-- 8. Profile -->
+          <button class="nav-item" id="nav-profile" onclick="switchTab('profile')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span>Profile</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Bottom User Account Card (Matching Screenshot) -->
+      <div class="sidebar-user-card">
+        <span class="user-label">Signed in as</span>
+        <span class="user-name">Peter Parker</span>
+        <span class="user-email">peter.parker@spidernet.org</span>
+        <button class="btn-signout" onclick="showSpiderToast('🔒 Signed out. Reconnecting suit...')">Sign out</button>
+      </div>
+    </aside>
+
+    <!-- ====================================================================
+         MAIN CONTENT AREA
+         ==================================================================== -->
+    <main class="main-content">
+      
+      <!-- Top Mobile Navigation Toggle -->
+      <div class="mobile-top-bar">
+        <button class="mobile-toggle-btn" id="mobileMenuBtn" aria-label="Open Navigation">
+          <span></span><span></span><span></span>
+        </button>
+        <span class="mobile-brand">Spider<span class="text-red">Learn</span></span>
+      </div>
+
+      <!-- ==================================================================
+           VIEW 1: DASHBOARD (EXACT 2x2 GRID FROM SCREENSHOT)
+           ================================================================== -->
+      <div class="tab-view active" id="view-dashboard">
+        <div class="dashboard-2x2-container">
+          
+          <!-- TOP-LEFT CARD: Weekly Study Curve Chart (0 to 90, Mon-Sun) -->
+          <div class="dash-card">
+            <div class="chart-box">
+              <svg class="curve-chart-svg" viewBox="0 0 540 220" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="spiderCurveGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#FFB800" stop-opacity="0.38"/>
+                    <stop offset="75%" stop-color="#FF2A54" stop-opacity="0.12"/>
+                    <stop offset="100%" stop-color="#FF2A54" stop-opacity="0.0"/>
+                  </linearGradient>
+                </defs>
+
+                <!-- Horizontal Dotted Reference Lines -->
+                <line x1="45" y1="25" x2="520" y2="25" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3"/>
+                <line x1="45" y1="80" x2="520" y2="80" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3"/>
+                <line x1="45" y1="135" x2="520" y2="135" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3"/>
+                <line x1="45" y1="190" x2="520" y2="190" stroke="rgba(255,255,255,0.12)"/>
+
+                <!-- Y-Axis Value Labels -->
+                <text x="20" y="30" class="axis-lbl">90</text>
+                <text x="20" y="85" class="axis-lbl">60</text>
+                <text x="20" y="140" class="axis-lbl">30</text>
+                <text x="28" y="194" class="axis-lbl">0</text>
+
+                <!-- Gradient Area Fill Under Curve -->
+                <path d="M 60 135 
+                         C 95 65, 125 65, 155 125 
+                         C 175 175, 205 175, 235 95 
+                         C 265 65, 305 65, 335 125 
+                         C 365 140, 400 10, 440 12 
+                         C 475 16, 505 130, 530 185 
+                         L 530 190 L 60 190 Z" 
+                      fill="url(#spiderCurveGrad)" />
+
+                <!-- Main Smooth Golden/Amber Wave Curve Line -->
+                <path d="M 60 135 
+                         C 95 65, 125 65, 155 125 
+                         C 175 175, 205 175, 235 95 
+                         C 265 65, 305 65, 335 125 
+                         C 365 140, 400 10, 440 12 
+                         C 475 16, 505 130, 530 185" 
+                      fill="none" stroke="#FFB800" stroke-width="3" stroke-linecap="round" />
+
+                <!-- Interactive Points -->
+                <circle cx="60" cy="135" r="4.5" class="chart-dot" data-tip="Mon: 48 min" />
+                <circle cx="155" cy="125" r="4.5" class="chart-dot" data-tip="Tue: 54 min" />
+                <circle cx="235" cy="95" r="4.5" class="chart-dot" data-tip="Wed: 68 min" />
+                <circle cx="335" cy="125" r="4.5" class="chart-dot" data-tip="Thu: 52 min" />
+                <circle cx="440" cy="12" r="5.5" class="chart-dot dot-peak" data-tip="Fri/Sat: 96 min (Peak)" />
+                <circle cx="530" cy="185" r="4.5" class="chart-dot" data-tip="Sun: 18 min" />
+              </svg>
+
+              <!-- X-Axis Days -->
+              <div class="chart-x-row">
+                <span>Mon</span>
+                <span>Tue</span>
+                <span>Wed</span>
+                <span>Thu</span>
+                <span>Fri</span>
+                <span>Sat</span>
+                <span>Sun</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- TOP-RIGHT CARD: Monthly Bar Chart (0 to 40, Feb-Jul) -->
+          <div class="dash-card">
+            <div class="bar-chart-container">
+              <!-- Y-Axis Labels -->
+              <div class="bar-y-axis">
+                <span>40</span>
+                <span>30</span>
+                <span>20</span>
+                <span>10</span>
+                <span>0</span>
+              </div>
+
+              <!-- Bars Column Container -->
+              <div class="bars-wrapper">
+                <div class="bar-item">
+                  <div class="bar-pillar" style="height: 32%;" data-tip="Feb: 12 hrs"></div>
+                  <span class="bar-lbl">Feb</span>
+                </div>
+
+                <div class="bar-item">
+                  <div class="bar-pillar" style="height: 48%;" data-tip="Mar: 18 hrs"></div>
+                  <span class="bar-lbl">Mar</span>
+                </div>
+
+                <div class="bar-item">
+                  <div class="bar-pillar" style="height: 38%;" data-tip="Apr: 14 hrs"></div>
+                  <span class="bar-lbl">Apr</span>
+                </div>
+
+                <div class="bar-item">
+                  <div class="bar-pillar" style="height: 70%;" data-tip="May: 26 hrs"></div>
+                  <span class="bar-lbl">May</span>
+                </div>
+
+                <div class="bar-item">
+                  <div class="bar-pillar" style="height: 84%;" data-tip="Jun: 32 hrs"></div>
+                  <span class="bar-lbl">Jun</span>
+                </div>
+
+                <div class="bar-item">
+                  <div class="bar-pillar bar-peak" style="height: 98%;" data-tip="Jul: 38 hrs"></div>
+                  <span class="bar-lbl">Jul</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BOTTOM-LEFT CARD: Continue learning (Matching Screenshot) -->
+          <div class="dash-card">
+            <div class="card-header-flex">
+              <h3 class="card-heading">Continue learning</h3>
+              <button class="link-btn" onclick="switchTab('courses')">View all</button>
+            </div>
+
+            <div class="continue-items-list">
+              <!-- Course 1: Applied Machine Learning -->
+              <div class="course-progress-card" onclick="openCourseModal('course-3')">
+                <div class="cp-top">
+                  <div>
+                    <h4 class="cp-title">Applied Machine Learning</h4>
+                    <span class="cp-next">Next: Regularization in practice</span>
+                  </div>
+                  <span class="status-pill pill-due">Due Today</span>
+                </div>
+                <div class="cp-track">
+                  <div class="cp-fill fill-gold" style="width: 74%;"></div>
+                </div>
+              </div>
+
+              <!-- Course 2: Systems Design Foundations -->
+              <div class="course-progress-card" onclick="openCourseModal('course-5')">
+                <div class="cp-top">
+                  <div>
+                    <h4 class="cp-title">Systems Design Foundations</h4>
+                    <span class="cp-next">Next: Caching strategies</span>
+                  </div>
+                  <span class="status-pill pill-progress">In progress</span>
+                </div>
+                <div class="cp-track">
+                  <div class="cp-fill fill-cyan" style="width: 42%;"></div>
+                </div>
+              </div>
+
+              <!-- Course 3: Data Structures Refresher -->
+              <div class="course-progress-card" onclick="openCourseModal('course-1')">
+                <div class="cp-top">
+                  <div>
+                    <h4 class="cp-title">Data Structures Refresher</h4>
+                    <span class="cp-next">Next: Graph traversals</span>
+                  </div>
+                  <span class="status-pill pill-paused">Paused</span>
+                </div>
+                <div class="cp-track">
+                  <div class="cp-fill fill-gray" style="width: 18%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BOTTOM-RIGHT CARD: Recent achievements (Matching Screenshot) -->
+          <div class="dash-card">
+            <div class="card-header-flex">
+              <h3 class="card-heading">Recent achievements</h3>
+            </div>
+
+            <div class="achieve-items-list">
+              <!-- Achievement 1 -->
+              <div class="achieve-row">
+                <div class="achieve-circle gold">
+                  <span>🏅</span>
+                </div>
+                <div class="achieve-text">
+                  <h4 class="achieve-title">First Milestone</h4>
+                  <p class="achieve-desc">Completed your first course</p>
+                </div>
+              </div>
+
+              <!-- Achievement 2 -->
+              <div class="achieve-row">
+                <div class="achieve-circle red">
+                  <span>🔥</span>
+                </div>
+                <div class="achieve-text">
+                  <h4 class="achieve-title">Streak Keeper</h4>
+                  <p class="achieve-desc">14-day learning streak</p>
+                </div>
+              </div>
+
+              <!-- Achievement 3 -->
+              <div class="achieve-row">
+                <div class="achieve-circle cyan">
+                  <span>⚡</span>
+                </div>
+                <div class="achieve-text">
+                  <h4 class="achieve-title">Deep Focus</h4>
+                  <p class="achieve-desc">10 hours studied in one week</p>
+                </div>
+              </div>
+
+              <!-- Achievement 4 -->
+              <div class="achieve-row">
+                <div class="achieve-circle purple">
+                  <span>🦾</span>
+                </div>
+                <div class="achieve-text">
+                  <h4 class="achieve-title">Project Builder</h4>
+                  <p class="achieve-desc">Shipped your first project</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ==================================================================
+           VIEW 2: FULL COURSES DIRECTORY
+           ================================================================== -->
+      <div class="tab-view" id="view-courses">
+        <div class="courses-container">
+          <div class="view-header">
+            <div>
+              <span class="view-tag">MULTIVERSE DIRECTORY</span>
+              <h2 class="view-title">EXPLORE <span class="text-red">ALL COURSES</span></h2>
+            </div>
+            <div class="courses-count-badge" id="coursesCountBadge">9 Courses</div>
+          </div>
+
+          <!-- Search & Filter Controls -->
+          <div class="courses-filter-bar">
+            <div class="search-input-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <input type="text" id="courseSearchInput" placeholder="Search mission name, mentor, tech stack (e.g. React, Python, AI)..." />
+            </div>
+
+            <div class="category-pills" id="categoryPills">
+              <button class="cat-btn active" data-cat="all">All Tracks</button>
+              <button class="cat-btn" data-cat="frontend">Frontend</button>
+              <button class="cat-btn" data-cat="ai">AI & ML</button>
+              <button class="cat-cat" data-cat="backend">Full-Stack</button>
+              <button class="cat-btn" data-cat="security">Security</button>
+              <button class="cat-btn" data-cat="multiverse">Cloud & DevOps</button>
+            </div>
+          </div>
+
+          <!-- Courses Grid -->
+          <div class="courses-grid" id="coursesGrid">
+            <!-- Dynamically populated via app.js -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================================================================
+           OTHER VIEWS (MY LEARNING, PROJECTS, INTERVIEW, ANALYTICS, PROFILE)
+           ================================================================== -->
+      <div class="tab-view" id="view-learning">
+        <div class="courses-container">
+          <div class="view-header">
+            <div>
+              <span class="view-tag">STUDENT ROADMAP</span>
+              <h2 class="view-title">MY <span class="text-red">LEARNING</span></h2>
+            </div>
+          </div>
+          <div class="my-learning-list" id="myLearningList"></div>
+        </div>
+      </div>
+
+      <div class="tab-view" id="view-projects">
+        <div class="courses-container">
+          <div class="view-header">
+            <div>
+              <span class="view-tag">CAPSTONES</span>
+              <h2 class="view-title">STARK <span class="text-red">PROJECTS</span></h2>
+            </div>
+          </div>
+          <div class="projects-grid">
+            <div class="proj-card">
+              <span class="proj-badge cyan">FULL-STACK</span>
+              <h3>Brooklyn Live Crime Dispatch</h3>
+              <p>Next.js 15, WebSockets, Redis Pub/Sub, and Interactive Mapbox GIS.</p>
+              <button class="btn-spider-sm btn-primary" onclick="showSpiderToast('🚀 Deploying sandbox...')">Launch Sandbox</button>
+            </div>
+            <div class="proj-card">
+              <span class="proj-badge purple">AI / CV</span>
+              <h3>Spider-Sense Threat Detection ViT</h3>
+              <p>Vision Transformer drone detector trained with PyTorch & ONNX runtime.</p>
+              <button class="btn-spider-sm btn-secondary" onclick="showSpiderToast('🧠 Loading model weights...')">Launch AI Lab</button>
+            </div>
+            <div class="proj-card">
+              <span class="proj-badge red">SECURITY</span>
+              <h3>Symbiote Binary Exploit Analyzer</h3>
+              <p>Static & dynamic vulnerability audit engine written in Rust & WebAssembly.</p>
+              <button class="btn-spider-sm btn-secondary" onclick="showSpiderToast('🛡️ Starting scan...')">Launch Security Chamber</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-view" id="view-interview">
+        <div class="courses-container">
+          <div class="view-header">
+            <div>
+              <span class="view-tag">BATTLE PREPARATION</span>
+              <h2 class="view-title">INTERVIEW <span class="text-red">PREP</span></h2>
+            </div>
+          </div>
+          <div class="interview-grid">
+            <div class="prep-card" onclick="showSpiderToast('🕷️ Launching Algorithm Practice...')">
+              <span class="prep-tag">ALGORITHMS</span>
+              <h4>Graph Traversals & Spider-Web Paths</h4>
+              <p>Master Dijkstra, A*, and topological sorts with live test suites.</p>
+              <span class="prep-link">Start Practice &rarr;</span>
+            </div>
+            <div class="prep-card" onclick="showSpiderToast('⚡ Launching System Design Board...')">
+              <span class="prep-tag">SYSTEM DESIGN</span>
+              <h4>Design Multiverse Real-time Message Bus</h4>
+              <p>Scaling to 10M concurrent WebSockets with low latency and Raft consensus.</p>
+              <span class="prep-link">Start Practice &rarr;</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-view" id="view-enterprise">
+        <div class="courses-container">
+          <div class="view-header">
+            <div>
+              <span class="view-tag">RESEARCH</span>
+              <h2 class="view-title">SPIDER <span class="text-red">LABS</span></h2>
+            </div>
+          </div>
+          <div class="labs-box">
+            <h3>🔬 Stark Multiverse Accelerator Program</h3>
+            <p>Get direct compute credits, quantum simulator access, and 1-on-1 mentorship with Miguel O'Hara (Spider-Man 2099).</p>
+            <button class="btn-spider-sm btn-primary" onclick="showSpiderToast('⚡ Application received! Stark recruiter notified.')">Apply for Access</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-view" id="view-analytics">
+        <div class="courses-container">
+          <div class="view-header">
+            <div>
+              <span class="view-tag">TELEMETRY</span>
+              <h2 class="view-title">SKILL <span class="text-red">ANALYTICS</span></h2>
+            </div>
+          </div>
+          <div class="analytics-card-grid">
+            <div class="dash-card">
+              <h3 class="card-heading" style="margin-bottom:14px;">Core Competency Radar</h3>
+              <div class="skill-meters">
+                <div class="sm-row"><span>🕸️ Frontend & WebGL</span><strong class="text-cyan">88%</strong></div>
+                <div class="sm-bar"><div class="sm-fill fill-cyan" style="width:88%;"></div></div>
+                <div class="sm-row" style="margin-top:10px;"><span>🧠 AI & Neural Networks</span><strong class="text-purple">65%</strong></div>
+                <div class="sm-bar"><div class="sm-fill fill-purple" style="width:65%;"></div></div>
+                <div class="sm-row" style="margin-top:10px;"><span>⚡ Symbiote Backend</span><strong class="text-gold">82%</strong></div>
+                <div class="sm-bar"><div class="sm-fill fill-gold" style="width:82%;"></div></div>
+                <div class="sm-row" style="margin-top:10px;"><span>🛡️ Cybersecurity</span><strong class="text-red">74%</strong></div>
+                <div class="sm-bar"><div class="sm-fill fill-red" style="width:74%;"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-view" id="view-profile">
+        <div class="courses-container">
+          <div class="view-header">
+            <div>
+              <span class="view-tag">HERO IDENTITY</span>
+              <h2 class="view-title">SUIT <span class="text-red">PROFILE</span></h2>
+            </div>
+          </div>
+          <div class="dash-card" style="max-width:600px;">
+            <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px;">
+              <div class="brand-avatar-circle" style="width:54px; height:54px; font-size:1.8rem;">🕷️</div>
+              <div>
+                <h3 style="color:#fff;">Peter Parker</h3>
+                <span style="color:var(--spider-cyan); font-size:0.85rem;">Senior Web-Slinger • Earth-616</span>
+              </div>
+            </div>
+            <button class="btn-spider-sm btn-primary" onclick="showSpiderToast('✅ Suit profile saved.')">Save Changes</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Course Syllabus Modal -->
+  <div class="modal-overlay hidden" id="courseModalOverlay">
+    <div class="course-modal">
+      <button class="modal-close" onclick="closeCourseModal()">&times;</button>
+      <div class="modal-hero">
+        <span class="modal-tag" id="modalTag">COURSE SYLLABUS</span>
+        <h2 class="modal-title" id="modalTitle">Course Title</h2>
+        <span class="modal-meta" id="modalMeta">👨‍🏫 Peter Parker • ⚡ Intermediate • 🏆 +850 XP</span>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc" id="modalDesc">Detailed description</p>
+        <h4 style="color:#fff; margin:16px 0 8px;">Roadmap Modules:</h4>
+        <div class="modal-syllabus" id="modalSyllabus"></div>
+        <div style="margin-top:20px; display:flex; gap:10px;">
+          <button class="btn-spider-sm btn-primary" onclick="handleEnrollCourse()">🚀 Suit Up & Continue</button>
+          <button class="btn-spider-sm btn-secondary" onclick="closeCourseModal()">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Spider Toast Alert -->
+  <div class="spider-toast-container" id="toastContainer"></div>
+
+  <!-- Main JavaScript Engine -->
+  <script src="app.js"></script>
+</body>
+</html>
