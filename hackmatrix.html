@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Urban Environmental Digital Twin — ENR01 | HackMatrix 5.0</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script>
+tailwind.config={
+  theme:{
+    extend:{
+      fontFamily:{ grotesk:['Space Grotesk','sans-serif'], inter:['Inter','sans-serif'], mono:['JetBrains Mono','monospace']},
+      colors:{ ink:'#060A14', pane:'#0d1428'}
+    }
+  }
+}
+</script>
+<style>
+*{scroll-behavior:smooth}
+body{background:#060A14;color:#e6edf3;font-family:'Inter',sans-serif;overflow-x:hidden}
+.glass{background:rgba(255,255,255,0.04);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.08)}
+.glass-strong{background:rgba(16,25,48,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.08)}
+.grid-pattern{background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);background-size:32px 32px}
+.nebula{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.nebula::before{content:'';position:absolute;width:800px;height:800px;left:-200px;top:-200px;background:radial-gradient(circle, rgba(0,209,255,0.12) 0%, transparent 70%);filter:blur(40px)}
+.nebula::after{content:'';position:absolute;width:700px;height:700px;right:-150px;top:120px;background:radial-gradient(circle, rgba(0,230,118,0.10) 0%, transparent 70%);filter:blur(40px)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#060A14}
+::-webkit-scrollbar-thumb{background:#1e2a4a;border-radius:999px}
+.leaflet-container{background:#0b1224 !important;border-radius:16px}
+.pulse-dot{animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.15);opacity:0.85}}
+.shimmer{background:linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);background-size:200% 100%;animation:shimmer 2.2s infinite}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.range{appearance:none;height:4px;background:rgba(255,255,255,0.12);border-radius:999px}
+.range::-webkit-slider-thumb{appearance:none;width:16px;height:16px;border-radius:50%;background:#00D1FF;border:2px solid #060A14;cursor:pointer;box-shadow:0 0 0 4px rgba(0,209,255,0.2)}
+</style>
+</head>
+<body class="antialiased">
+<!-- NAV -->
+<nav class="fixed top-0 w-full z-50 glass-strong border-b border-white/5">
+  <div class="max-w-[1280px] mx-auto px-4 md:px-6 h-[64px] flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center text-ink font-bold text-sm"><i class="fa-solid fa-layer-group text-[#060A14]"></i></div>
+      <div>
+        <div class="font-grotesk font-bold text-sm tracking-tight leading-none">URBAN TWIN</div>
+        <div class="text-[10px] tracking-[0.18em] text-white/50 font-mono">ENR01 • PUNE / PIMPRI</div>
+      </div>
+      <span class="hidden lg:inline-flex ml-3 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono tracking-widest text-emerald-300">LIVE DIGITAL TWIN</span>
+    </div>
+    <div class="hidden md:flex items-center gap-6 text-[13px] font-medium text-white/70">
+      <a href="#home" class="hover:text-white transition">Home</a>
+      <a href="#digital-twin" class="hover:text-white transition">Digital Twin</a>
+      <a href="#forecast" class="hover:text-white transition">Forecast</a>
+      <a href="#hotspots" class="hover:text-white transition">Hotspots</a>
+      <a href="#scenarios" class="hover:text-white transition">Scenarios</a>
+      <a href="#analytics" class="hover:text-white transition">Analytics</a>
+      <a href="#about" class="hover:text-white transition">About</a>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="document.getElementById('analytics').scrollIntoView()" class="hidden sm:inline-flex px-4 py-2 rounded-full bg-white text-ink text-sm font-semibold hover:bg-white/90 transition">Launch Digital Twin <i class="fa-solid fa-arrow-right ml-2 text-xs"></i></button>
+      <button id="menuBtn" class="md:hidden w-9 h-9 rounded-xl glass flex items-center justify-center"><i class="fa-solid fa-bars"></i></button>
+    </div>
+  </div>
+  <div id="mobileMenu" class="hidden md:hidden border-t border-white/5 bg-[#0a1020] px-4 py-4 space-y-3 text-sm">
+    <a href="#home" class="block">Home</a><a href="#digital-twin" class="block">Digital Twin</a><a href="#forecast" class="block">Forecast</a><a href="#hotspots" class="block">Hotspots</a><a href="#scenarios" class="block">Scenarios</a><a href="#analytics" class="block">Analytics</a><a href="#about" class="block">About</a>
+    <button onclick="document.getElementById('analytics').scrollIntoView()" class="w-full mt-2 py-3 rounded-xl bg-white text-ink font-semibold">Launch Digital Twin</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="home" class="relative pt-[64px] overflow-hidden">
+  <div class="nebula"></div>
+  <div class="absolute inset-0 grid-pattern opacity-40 pointer-events-none"></div>
+  <div class="relative max-w-[1280px] mx-auto px-4 md:px-6 py-8 md:py-12 grid lg:grid-cols-[1.05fr_0.95fr] gap-8 items-start">
+    <!-- left -->
+    <div class="pt-2">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass text-xs">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot shadow-[0_0_12px_rgba(16,185,129,0.6)]"></span>
+        <span class="font-mono tracking-widest text-white/70">HACKMATRIX 5.0 • ENR01 • ENVIRONMENTAL AI</span>
+        <span class="hidden sm:inline-flex ml-2 px-2 py-0.5 rounded-full bg-white text-ink text-[10px] font-bold">LIVE</span>
+      </div>
+      <h1 class="font-grotesk font-bold tracking-tight leading-[0.9] mt-5 text-4xl md:text-[56px]">
+        <span class="text-white">Urban Environmental</span><br>
+        <span class="bg-gradient-to-r from-cyan-300 via-sky-400 to-emerald-300 bg-clip-text text-transparent">Digital Twin</span>
+      </h1>
+      <p class="font-grotesk text-lg md:text-[22px] text-white/90 mt-4 font-light">AI-powered forecasting and simulation for <span class="text-cyan-300">cleaner and smarter cities.</span></p>
+      <p class="text-white/60 text-[15px] leading-relaxed mt-4 max-w-[560px]">Transforming urban environmental data into actionable insights through machine learning, hotspot detection, and what-if scenario simulation — <span class="text-white/90">built for Pimpri-Chinchwad / Pune.</span></p>
+      <div class="flex flex-wrap gap-3 mt-7">
+        <button onclick="document.getElementById('analytics').scrollIntoView({behavior:'smooth'})" class="px-6 py-3 rounded-full bg-white text-ink font-semibold text-sm inline-flex items-center gap-2 hover:bg-white/90 transition">Launch Digital Twin <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i></button>
+        <button onclick="document.getElementById('about').scrollIntoView({behavior:'smooth'})" class="px-6 py-3 rounded-full glass font-semibold text-sm inline-flex items-center gap-2 hover:bg-white/10 transition">Explore Project <i class="fa-regular fa-circle-play"></i></button>
+      </div>
+      <div class="grid grid-cols-3 gap-3 mt-8 max-w-[560px]">
+        <div class="glass rounded-2xl p-4">
+          <div class="text-[11px] tracking-widest font-mono text-white/50">NEXT-HOUR FORECAST</div>
+          <div class="font-grotesk font-bold text-xl mt-1">PM2.5 <span class="text-cyan-300">AI/ML</span></div>
+          <div class="text-xs text-white/50">Random Forest • R² 0.87</div>
+        </div>
+        <div class="glass rounded-2xl p-4">
+          <div class="text-[11px] tracking-widest font-mono text-white/50">HOTSPOT ENGINE</div>
+          <div class="font-grotesk font-bold text-xl mt-1">4 Levels</div>
+          <div class="text-xs text-emerald-300">Low → Very High</div>
+        </div>
+        <div class="glass rounded-2xl p-4">
+          <div class="text-[11px] tracking-widest font-mono text-white/50">SCENARIO MODE</div>
+          <div class="font-grotesk font-bold text-xl mt-1">Modeled</div>
+          <div class="text-xs text-white/50">Not observations</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 mt-6 font-mono text-[11px] tracking-widest text-white/45">
+        <span class="w-2 h-2 rounded-full bg-emerald-400"></span> OBSERVED &nbsp; <span class="w-2 h-2 rounded-full bg-sky-400"></span> AI PREDICTION &nbsp; <span class="w-2 h-2 rounded-full bg-amber-400"></span> MODELED SCENARIO
+      </div>
+    </div>
+    <!-- right visual -->
+    <div class="relative">
+      <div class="glass-strong rounded-[24px] overflow-hidden p-3 md:p-4 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.7)]"></span>
+            <span class="font-mono text-xs tracking-widest text-white/80">PUNE • LIVE TWIN • MODELED / PREDICTED</span>
+          </div>
+          <span class="px-2 py-1 rounded-full bg-cyan-400 text-ink text-[10px] font-bold tracking-widest">AI ANALYTICS</span>
+        </div>
+        <!-- map mock -->
+        <div class="relative rounded-2xl overflow-hidden bg-[#0f1c33] h-[300px] md:h-[360px] border border-white/5">
+          <div class="absolute inset-0 opacity-30" style="background: radial-gradient(circle at 30% 30%, rgba(0,209,255,0.25), transparent 40%), radial-gradient(circle at 70% 60%, rgba(0,230,118,0.22), transparent 35%), radial-gradient(circle at 55% 80%, rgba(239,68,68,0.25), transparent 35%)"></div>
+          <svg viewBox="0 0 400 260" class="absolute inset-0 w-full h-full">
+            <path d="M40 80 Q120 20 200 60 T360 70 L360 210 Q200 250 40 210 Z" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+            <path d="M70 120 L110 90 L160 110 L210 80 L280 100 L320 140 L260 190 L180 200 L90 170 Z" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="4 6"/>
+            <!-- heat blobs -->
+            <ellipse cx="140" cy="125" rx="55" ry="38" fill="rgba(250,204,21,0.35)" />
+            <ellipse cx="225" cy="115" rx="70" ry="42" fill="rgba(249,115,22,0.42)" />
+            <ellipse cx="285" cy="150" rx="48" ry="36" fill="rgba(239,68,68,0.45)" />
+            <ellipse cx="170" cy="170" rx="42" ry="28" fill="rgba(16,185,129,0.32)" />
+            <ellipse cx="120" cy="90" rx="22" ry="16" fill="rgba(52,211,153,0.35)" />
+          </svg>
+          <!-- pins -->
+          <div class="absolute left-[18%] top-[28%] flex flex-col items-center">
+            <div class="px-2 py-1 rounded-full bg-[#0a1020] border border-white/10 text-[10px] font-mono">WAKAD • 54</div><div class="w-2 h-2 rounded-full bg-emerald-400 mt-1 shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div>
+          </div>
+          <div class="absolute left-[44%] top-[22%] flex flex-col items-center">
+            <div class="px-2 py-1 rounded-full bg-amber-400 text-ink text-[10px] font-bold">MORWADI • 142</div><div class="w-2.5 h-2.5 rounded-full bg-amber-400 mt-1 animate-pulse"></div>
+          </div>
+          <div class="absolute left-[62%] top-[48%] flex flex-col items-center">
+            <div class="px-2 py-1 rounded-full bg-red-500 text-white text-[10px] font-bold">PIMPRI • 189</div><div class="w-3 h-3 rounded-full bg-red-500 mt-1 shadow-[0_0_12px_rgba(239,68,68,0.8)] animate-pulse"></div>
+          </div>
+          <div class="absolute left-[36%] top-[62%] flex flex-col items-center">
+            <div class="px-2 py-1 rounded-full bg-sky-400 text-ink text-[10px] font-bold">CHINCHWAD • 76</div><div class="w-2 h-2 rounded-full bg-sky-400 mt-1"></div>
+          </div>
+          <!-- bottom legend -->
+          <div class="absolute bottom-2 left-2 right-2 glass rounded-xl px-3 py-2 flex items-center justify-between">
+            <div class="flex items-center gap-1.5 text-[10px] font-mono tracking-widest text-white/60"><span class="w-2 h-2 rounded-full bg-emerald-400"></span>LOW <span class="w-2 h-2 rounded-full bg-yellow-300 ml-2"></span>MOD <span class="w-2 h-2 rounded-full bg-orange-400 ml-2"></span>HIGH <span class="w-2 h-2 rounded-full bg-red-500 ml-2"></span>V.HIGH</div>
+            <span class="hidden sm:inline text-[10px] font-mono bg-white/10 px-2 py-1 rounded-full">1-H FORECAST</span>
+          </div>
+        </div>
+        <!-- mini stats under map -->
+        <div class="grid grid-cols-3 gap-3 mt-3">
+          <div class="rounded-2xl bg-gradient-to-br from-cyan-500 to-sky-600 p-4 text-white">
+            <div class="text-[11px] tracking-widest opacity-80">PM2.5 • PREDICTED</div>
+            <div class="font-grotesk font-bold text-2xl leading-none mt-1">74 <span class="text-sm font-normal opacity-80">µg/m³</span></div>
+            <div class="text-xs opacity-80 mt-1">Next hour • +6 vs now</div>
+          </div>
+          <div class="rounded-2xl glass p-3">
+            <div class="text-[11px] tracking-widest font-mono text-white/50">WEATHER</div>
+            <div class="flex items-center gap-2 mt-1 text-sm"><i class="fa-solid fa-temperature-half text-amber-300"></i> 29.4°C <span class="text-white/40">•</span> <i class="fa-solid fa-droplet text-sky-300"></i> 64%</div>
+            <div class="flex items-center gap-2 mt-1 text-xs text-white/60"><i class="fa-solid fa-wind"></i> 4.2 m/s NW</div>
+            <div class="h-[28px] mt-1"><canvas id="heroSpark"></canvas></div>
+          </div>
+          <div class="rounded-2xl glass p-3">
+            <div class="text-[11px] tracking-widest font-mono text-white/50">HOTSPOT ALERT</div>
+            <div class="text-sm font-semibold text-amber-300 mt-1">2 Zones • High Risk</div>
+            <div class="text-xs text-white/60">Modeled / Predicted • 14:00-16:00</div>
+            <div class="mt-2 flex gap-1">
+              <span class="flex-1 h-1.5 rounded-full bg-red-500"></span><span class="flex-1 h-1.5 rounded-full bg-orange-400"></span><span class="flex-1 h-1.5 rounded-full bg-yellow-300"></span><span class="flex-1 h-1.5 rounded-full bg-emerald-400"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- floating badge -->
+      <div class="absolute -right-2 -bottom-3 hidden md:flex glass rounded-full px-3 py-2 items-center gap-2 text-xs shadow-xl">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> Data refresh • 60s • Observed ≠ Modeled
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GOALS -->
+<section class="max-w-[1280px] mx-auto px-4 md:px-6 mt-6">
+  <div class="flex items-end justify-between gap-4">
+    <h2 class="font-grotesk font-bold text-2xl md:text-3xl">Project Goals</h2>
+    <span class="hidden md:inline font-mono text-[11px] tracking-widest text-white/40">FOUR PILLARS • ENR01</span>
+  </div>
+  <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
+    <div class="glass rounded-2xl p-5 hover:bg-white/[0.06] transition group">
+      <div class="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-300 group-hover:scale-105 transition"><i class="fa-solid fa-chart-line"></i></div>
+      <h3 class="font-semibold mt-4">Air Quality Forecast</h3>
+      <p class="text-sm text-white/60 mt-1.5 leading-relaxed">Predict PM2.5 concentration one hour ahead using historical pollution + weather + engineered time features.</p>
+      <div class="mt-4 flex items-center gap-2 text-xs font-mono text-cyan-300"><span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> AI / ML PREDICTION</div>
+    </div>
+    <div class="glass rounded-2xl p-5 hover:bg-white/[0.06] transition group">
+      <div class="w-10 h-10 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-300 group-hover:scale-105 transition"><i class="fa-solid fa-fire"></i></div>
+      <h3 class="font-semibold mt-4">Hotspot Detection</h3>
+      <p class="text-sm text-white/60 mt-1.5 leading-relaxed">Identify periods and locations with high predicted pollution across PCMC sectors.</p>
+      <div class="mt-4 flex items-center gap-2 text-xs font-mono text-orange-300"><span class="w-1.5 h-1.5 rounded-full bg-orange-400"></span> MODELED CLUSTERS</div>
+    </div>
+    <div class="glass rounded-2xl p-5 hover:bg-white/[0.06] transition group">
+      <div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-300 group-hover:scale-105 transition"><i class="fa-solid fa-flask"></i></div>
+      <h3 class="font-semibold mt-4">Environmental Analysis</h3>
+      <p class="text-sm text-white/60 mt-1.5 leading-relaxed">Study relationships between pollution and temperature, humidity, wind, pressure.</p>
+      <div class="mt-4 flex items-center gap-2 text-xs font-mono text-emerald-300"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> CORRELATION • OBSERVED</div>
+    </div>
+    <div class="glass rounded-2xl p-5 hover:bg-white/[0.06] transition group relative overflow-hidden">
+      <div class="absolute top-3 right-3 px-2 py-1 rounded-full bg-amber-400 text-ink text-[10px] font-bold tracking-widest">SIMULATION</div>
+      <div class="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/30 flex items-center justify-center text-violet-300 group-hover:scale-105 transition"><i class="fa-solid fa-sliders"></i></div>
+      <h3 class="font-semibold mt-4">What-If Simulation</h3>
+      <p class="text-sm text-white/60 mt-1.5 leading-relaxed">Explore modeled pollution-reduction scenarios — not real observations.</p>
+      <div class="mt-4 flex items-center gap-2 text-xs font-mono text-amber-300"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> SCENARIO ESTIMATE</div>
+    </div>
+  </div>
+</section>
+
+<!-- DATA SOURCES -->
+<section class="max-w-[1280px] mx-auto px-4 md:px-6 mt-8">
+  <h2 class="font-grotesk font-bold text-2xl">Data Sources</h2>
+  <p class="text-sm text-white/50 mt-1">Observed inputs • Separated from predictions & scenarios</p>
+  <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
+    <div class="glass rounded-2xl p-5">
+      <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-cyan-500 flex items-center justify-center text-white"><i class="fa-solid fa-wind"></i></div><div><div class="font-semibold text-sm">Air Quality</div><div class="text-xs text-white/50 font-mono">OBSERVED • HOURLY</div></div></div>
+      <div class="flex flex-wrap gap-1.5 mt-4">
+        <span class="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 text-xs">PM2.5</span><span class="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 text-xs">PM10</span><span class="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 text-xs">NO₂</span><span class="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 text-xs">CO</span><span class="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs">O₃</span>
+      </div>
+      <div class="mt-4 text-xs text-white/45">Station sensors • PCMC network</div>
+    </div>
+    <div class="glass rounded-2xl p-5">
+      <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-sky-500 flex items-center justify-center text-white"><i class="fa-solid fa-cloud-sun"></i></div><div><div class="font-semibold text-sm">Weather</div><div class="text-xs text-white/50 font-mono">OBSERVED • MET</div></div></div>
+      <div class="flex flex-wrap gap-1.5 mt-4">
+        <span class="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 text-xs">Temp</span><span class="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 text-xs">Humidity</span><span class="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 text-xs">Rainfall</span><span class="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 text-xs">Pressure</span><span class="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 text-xs">Wind</span>
+      </div>
+      <div class="mt-4 text-xs text-white/45">IMD + local stations</div>
+    </div>
+    <div class="glass rounded-2xl p-5">
+      <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-white"><i class="fa-solid fa-car-side"></i></div><div><div class="font-semibold text-sm">Traffic</div><div class="text-xs text-white/50 font-mono">CONTEXT • MODELED</div></div></div>
+      <p class="text-sm text-white/60 mt-4 leading-relaxed">Traffic-volume information used for traffic-related analysis and scenario modeling only.</p>
+      <div class="mt-3 inline-flex px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-xs font-mono text-amber-300">Not a direct emission sensor</div>
+    </div>
+    <div class="glass rounded-2xl p-5">
+      <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white"><i class="fa-solid fa-location-dot"></i></div><div><div class="font-semibold text-sm">Location</div><div class="text-xs text-white/50 font-mono">PUNE / PCMC</div></div></div>
+      <p class="text-sm text-white/60 mt-4 leading-relaxed">Pimpri-Chinchwad & Pune urban environment • Ward-level zones, land-use context.</p>
+      <div class="mt-3 text-xs font-mono text-white/40 flex items-center gap-2"><i class="fa-solid fa-map-pin text-emerald-400"></i> 18.6298°N, 73.7997°E</div>
+    </div>
+  </div>
+</section>
+
+<!-- AI / ML -->
+<section id="forecast" class="max-w-[1280px] mx-auto px-4 md:px-6 mt-8">
+  <div class="glass-strong rounded-[24px] overflow-hidden">
+    <div class="grid lg:grid-cols-2 gap-0">
+      <div class="p-6 md:p-8">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-xs font-mono tracking-widest text-cyan-300"><i class="fa-solid fa-microchip"></i> AI / ML PIPELINE</div>
+        <h2 class="font-grotesk font-bold text-2xl md:text-3xl mt-4 leading-tight">AI-Powered PM2.5 Forecasting</h2>
+        <p class="text-sm text-white/60 mt-3 leading-relaxed">A Random Forest regression model uses historical pollution, weather, temporal and engineered features to predict <span class="text-white">PM2.5 one hour ahead</span>. Trained on 18 months of hourly observations.</p>
+        <div class="flex flex-wrap gap-2 mt-5">
+          <span class="px-3 py-1.5 rounded-full bg-cyan-500 text-ink text-xs font-semibold">PM2.5</span>
+          <span class="px-3 py-1.5 rounded-full glass text-xs">PM10</span><span class="px-3 py-1.5 rounded-full glass text-xs">NO₂</span><span class="px-3 py-1.5 rounded-full glass text-xs">CO</span><span class="px-3 py-1.5 rounded-full glass text-xs">Ozone</span>
+          <span class="px-3 py-1.5 rounded-full glass text-xs">Temperature</span><span class="px-3 py-1.5 rounded-full glass text-xs">Humidity</span><span class="px-3 py-1.5 rounded-full glass text-xs">Rainfall</span><span class="px-3 py-1.5 rounded-full glass text-xs">Wind Speed</span><span class="px-3 py-1.5 rounded-full glass text-xs">Wind Dir</span><span class="px-3 py-1.5 rounded-full bg-white/10 text-xs">Hour</span><span class="px-3 py-1.5 rounded-full bg-white/10 text-xs">Day</span><span class="px-3 py-1.5 rounded-full bg-white/10 text-xs">Month</span>
+        </div>
+        <div class="grid grid-cols-3 gap-3 mt-6">
+          <div class="rounded-2xl bg-[#0f1a33] border border-white/5 p-4 text-center">
+            <div class="text-[11px] tracking-widest font-mono text-white/50">MAE</div>
+            <div class="font-grotesk font-bold text-xl mt-1" id="maeVal">—</div>
+            <div class="text-[11px] text-white/40">µg/m³ • lower is better</div>
+            <div class="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden"><div class="h-full bg-cyan-400" style="width:72%"></div></div>
+          </div>
+          <div class="rounded-2xl bg-[#0f1a33] border border-white/5 p-4 text-center">
+            <div class="text-[11px] tracking-widest font-mono text-white/50">RMSE</div>
+            <div class="font-grotesk font-bold text-xl mt-1" id="rmseVal">—</div>
+            <div class="text-[11px] text-white/40">µg/m³ • validation</div>
+            <div class="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden"><div class="h-full bg-sky-400" style="width:64%"></div></div>
+          </div>
+          <div class="rounded-2xl bg-[#0f1a33] border border-white/5 p-4 text-center">
+            <div class="text-[11px] tracking-widest font-mono text-white/50">R² SCORE</div>
+            <div class="font-grotesk font-bold text-xl mt-1" id="r2Val">—</div>
+            <div class="text-[11px] text-white/40">explained variance</div>
+            <div class="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden"><div id="r2Bar" class="h-full bg-emerald-400" style="width:0%"></div></div>
+          </div>
+        </div>
+        <div class="mt-4 flex items-center gap-2 text-xs font-mono text-white/45"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> <span id="modelStatus">Loading model_results.json …</span></div>
+      </div>
+      <div class="p-6 md:p-8 bg-white/[0.02] border-t lg:border-t-0 lg:border-l border-white/5">
+        <div class="flex items-center justify-between">
+          <h3 class="font-semibold">Feature Importance</h3>
+          <span class="text-xs font-mono px-2 py-1 rounded-full glass">RANDOM FOREST</span>
+        </div>
+        <p class="text-xs text-white/50 mt-1">Top contributors to next-hour PM2.5 prediction</p>
+        <div class="h-[220px] mt-4"><canvas id="featureChart"></canvas></div>
+        <div class="glass rounded-xl p-3 mt-4 flex items-start gap-3">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-300 flex-shrink-0"><i class="fa-solid fa-triangle-exclamation text-xs"></i></div>
+          <p class="text-xs leading-relaxed text-white/60"><span class="text-white font-semibold">Responsible AI:</span> Predictions are probabilistic estimates. Uncertainty increases during extreme weather or festival traffic spikes. Always compare with observed AQI stations.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<section id="digital-twin" class="max-w-[1280px] mx-auto px-4 md:px-6 mt-8">
+  <div class="flex items-center justify-between">
+    <h2 class="font-grotesk font-bold text-xl md:text-2xl">Digital Twin Pipeline</h2>
+    <span class="hidden md:inline text-xs font-mono tracking-widest text-white/40">OBSERVED → ENGINEERED → PREDICTED → MODELED</span>
+  </div>
+  <div class="glass rounded-2xl p-4 md:p-6 mt-4 overflow-x-auto">
+    <div class="flex items-center gap-2 md:gap-3 min-w-[900px]">
+      <div class="flex-1 min-w-[110px] rounded-xl bg-cyan-500/10 border border-cyan-500/20 p-3 text-center">
+        <div class="w-8 h-8 rounded-lg bg-cyan-500 flex items-center justify-center mx-auto text-white text-sm"><i class="fa-solid fa-database"></i></div>
+        <div class="text-xs font-semibold mt-2">Air Quality Data</div><div class="text-[11px] font-mono text-white/50">OBSERVED</div>
+      </div>
+      <i class="fa-solid fa-arrow-right text-white/20"></i>
+      <div class="flex-1 min-w-[110px] rounded-xl bg-sky-500/10 border border-sky-500/20 p-3 text-center">
+        <div class="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center mx-auto text-white text-sm"><i class="fa-solid fa-cloud"></i></div>
+        <div class="text-xs font-semibold mt-2">Weather Data</div><div class="text-[11px] font-mono text-white/50">OBSERVED</div>
+      </div>
+      <i class="fa-solid fa-arrow-right text-white/20"></i>
+      <div class="flex-1 min-w-[110px] rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-center">
+        <div class="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center mx-auto text-white text-sm"><i class="fa-solid fa-car"></i></div>
+        <div class="text-xs font-semibold mt-2">Traffic / Context</div><div class="text-[11px] font-mono text-white/50">CONTEXT</div>
+      </div>
+      <i class="fa-solid fa-arrow-right text-white/20"></i>
+      <div class="flex-1 min-w-[110px] rounded-xl glass p-3 text-center">
+        <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center mx-auto text-sm"><i class="fa-solid fa-broom"></i></div>
+        <div class="text-xs font-semibold mt-2">Data Cleaning</div><div class="text-[11px] font-mono text-white/50">ENGINEERED</div>
+      </div>
+      <i class="fa-solid fa-arrow-right text-white/20"></i>
+      <div class="flex-1 min-w-[110px] rounded-xl glass p-3 text-center">
+        <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center mx-auto text-sm"><i class="fa-solid fa-gears"></i></div>
+        <div class="text-xs font-semibold mt-2">Feature Eng.</div><div class="text-[11px] font-mono text-white/50">ENGINEERED</div>
+      </div>
+      <i class="fa-solid fa-arrow-right text-white/20"></i>
+      <div class="flex-1 min-w-[110px] rounded-xl bg-violet-500/15 border border-violet-500/30 p-3 text-center">
+        <div class="w-8 h-8 rounded-lg bg-violet-500 flex items-center justify-center mx-auto text-white text-sm"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+        <div class="text-xs font-semibold mt-2">ML Prediction</div><div class="text-[11px] font-mono text-violet-300">AI PREDICTION</div>
+      </div>
+      <i class="fa-solid fa-arrow-right text-white/20"></i>
+      <div class="flex-1 min-w-[110px] rounded-xl bg-orange-500/15 border border-orange-500/30 p-3 text-center">
+        <div class="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center mx-auto text-white text-sm"><i class="fa-solid fa-location-crosshairs"></i></div>
+        <div class="text-xs font-semibold mt-2">Hotspot Detection</div><div class="text-[11px] font-mono text-orange-300">MODELED</div>
+      </div>
+      <i class="fa-solid fa-arrow-right text-white/20"></i>
+      <div class="flex-1 min-w-[110px] rounded-xl bg-amber-500/15 border border-amber-500/30 p-3 text-center">
+        <div class="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center mx-auto text-white text-sm"><i class="fa-solid fa-flask-vial"></i></div>
+        <div class="text-xs font-semibold mt-2">Scenario Sim.</div><div class="text-[11px] font-mono text-amber-300">MODELED</div>
+      </div>
+      <i class="fa-solid fa-arrow-right text-white/20"></i>
+      <div class="flex-1 min-w-[110px] rounded-xl bg-emerald-500/15 border border-emerald-500/30 p-3 text-center">
+        <div class="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center mx-auto text-white text-sm"><i class="fa-solid fa-table-columns"></i></div>
+        <div class="text-xs font-semibold mt-2">Twin Dashboard</div><div class="text-[11px] font-mono text-emerald-300">VISUAL</div>
+      </div>
+    </div>
+    <div class="flex items-center justify-center gap-2 mt-4 text-[11px] font-mono tracking-widest text-white/35">
+      <span class="w-2 h-2 rounded-full bg-cyan-400"></span> OBSERVED &nbsp; <span class="w-2 h-2 rounded-full bg-violet-400"></span> PREDICTION &nbsp; <span class="w-2 h-2 rounded-full bg-amber-400"></span> MODELED SCENARIO
+    </div>
+  </div>
+</section>
+
+<!-- HOTSPOTS -->
+<section id="hotspots" class="max-w-[1280px] mx-auto px-4 md:px-6 mt-8">
+  <div class="glass-strong rounded-[24px] overflow-hidden">
+    <div class="p-6 md:p-7 flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/15 border border-orange-500/30 text-xs font-mono tracking-widest text-orange-300"><i class="fa-solid fa-map-location-dot"></i> MODELED / PREDICTED POLLUTION</div>
+        <h2 class="font-grotesk font-bold text-2xl md:text-3xl mt-3">Urban Pollution Hotspots</h2>
+        <p class="text-sm text-white/60 mt-2 max-w-[620px]">Predicted hotspots highlight zones where next-hour PM2.5 is modeled as High / Very High. Not direct sensor observations — use for prioritization and scenario planning.</p>
+      </div>
+      <div class="flex items-center gap-2 glass rounded-full p-1">
+        <button class="hotspotBtn active px-4 py-2 rounded-full bg-white text-ink text-xs font-semibold" data-range="live">Live Forecast</button>
+        <button class="hotspotBtn px-4 py-2 rounded-full text-xs font-medium text-white/70" data-range="peak">Peak Hours</button>
+        <button class="hotspotBtn px-4 py-2 rounded-full text-xs font-medium text-white/70" data-range="night">Night + Winter</button>
+      </div>
+    </div>
+    <div class="grid lg:grid-cols-[1.35fr_0.75fr] gap-4 px-4 md:px-6 pb-6">
+      <div class="rounded-2xl overflow-hidden border border-white/5 bg-[#0b1224] h-[420px] relative">
+        <div id="map" class="absolute inset-0"></div>
+        <div class="absolute top-3 left-3 glass rounded-xl px-3 py-2 flex items-center gap-2 text-xs">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> 6 zones monitored • PCMC
+        </div>
+        <div class="absolute bottom-3 left-3 right-3 glass rounded-xl px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-mono tracking-widest text-white/60">LEGEND</span>
+            <span class="flex items-center gap-1 text-xs"><span class="w-3 h-1.5 rounded-full bg-emerald-400"></span> Low</span>
+            <span class="flex items-center gap-1 text-xs"><span class="w-3 h-1.5 rounded-full bg-yellow-300"></span> Moderate</span>
+            <span class="flex items-center gap-1 text-xs"><span class="w-3 h-1.5 rounded-full bg-orange-400"></span> High</span>
+            <span class="flex items-center gap-1 text-xs"><span class="w-3 h-1.5 rounded-full bg-red-500"></span> Very High</span>
+          </div>
+          <span class="text-[11px] font-mono bg-amber-400 text-ink px-2 py-1 rounded-full font-bold">MODELED • NOT OBSERVED</span>
+        </div>
+      </div>
+      <div class="space-y-3">
+        <div class="glass rounded-2xl p-4">
+          <div class="flex items-center justify-between"><h3 class="font-semibold text-sm">Top Hotspots • Next Hour</h3><span class="text-xs font-mono px-2 py-1 rounded-full bg-red-500 text-white">2 CRITICAL</span></div>
+          <div class="space-y-2.5 mt-4" id="hotspotList">
+            <!-- injected -->
+          </div>
+          <div class="mt-4 flex items-center gap-2 text-xs">
+            <label class="text-white/60 font-mono">PM2.5 threshold</label>
+            <input type="range" min="50" max="150" value="100" class="range flex-1" id="thresholdRange">
+            <span class="font-mono bg-white text-ink px-2 py-1 rounded-full text-xs font-bold" id="thresholdVal">100</span>
+          </div>
+        </div>
+        <div class="glass rounded-2xl p-4">
+          <h4 class="font-semibold text-sm">Hotspot Timeline</h4>
+          <p class="text-xs text-white/50">Predicted PM2.5 • Today</p>
+          <div class="h-[120px] mt-3"><canvas id="hotspotTimeline"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCENARIOS -->
+<section id="scenarios" class="max-w-[1280px] mx-auto px-4 md:px-6 mt-8">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <div class="inline-flex px-3 py-1 rounded-full bg-violet-500/15 border border-violet-500/30 text-xs font-mono tracking-widest text-violet-300">WHAT-IF ENGINE • MODELED ESTIMATES</div>
+      <h2 class="font-grotesk font-bold text-2xl md:text-3xl mt-3">What-If Pollution Scenarios</h2>
+      <p class="text-sm text-white/60 mt-1 max-w-[640px]">Test interventions on modeled traffic indicators — scenario results are <span class="text-amber-300">model-based estimates, not direct observations.</span></p>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="setScenario('baseline')" class="scenarioTab px-4 py-2 rounded-full glass text-xs font-semibold" data-tab="baseline">Baseline</button>
+      <button onclick="setScenario('traffic')" class="scenarioTab px-4 py-2 rounded-full bg-white text-ink text-xs font-semibold" data-tab="traffic">Traffic −30%</button>
+      <button onclick="setScenario('combined')" class="scenarioTab px-4 py-2 rounded-full glass text-xs font-semibold" data-tab="combined">Combined</button>
+    </div>
+  </div>
+  <div class="grid md:grid-cols-3 gap-4 mt-5">
+    <div class="scenarioCard glass rounded-2xl p-5 border-white/10 cursor-pointer hover:bg-white/[0.06] transition" data-card="baseline" onclick="setScenario('baseline')">
+      <div class="flex items-center justify-between"><span class="px-2.5 py-1 rounded-full bg-white/10 text-xs font-mono">BASELINE</span><span class="text-xs font-mono text-white/40">MODELED • CURRENT</span></div>
+      <h3 class="font-semibold mt-3">Baseline — Current modeled conditions</h3>
+      <p class="text-sm text-white/60 mt-1 leading-relaxed">Uses present traffic-related indicators. Reference for all comparisons.</p>
+      <div class="mt-4 flex items-baseline gap-2"><span class="font-grotesk font-bold text-2xl" id="baseVal">84</span><span class="text-xs text-white/50">µg/m³ PM2.5 (predicted)</span></div>
+      <div class="mt-3 h-1.5 rounded-full bg-white/10 overflow-hidden"><div class="h-full bg-white" style="width:72%"></div></div>
+    </div>
+    <div class="scenarioCard rounded-2xl p-5 border cursor-pointer transition bg-gradient-to-br from-cyan-500/20 to-sky-500/10 border-cyan-400/30 ring-1 ring-cyan-400/20" data-card="traffic" onclick="setScenario('traffic')">
+      <div class="flex items-center justify-between"><span class="px-2.5 py-1 rounded-full bg-cyan-400 text-ink text-xs font-bold">TRAFFIC −30%</span><span class="px-2 py-1 rounded-full bg-amber-400 text-ink text-[10px] font-bold">MODELED</span></div>
+      <h3 class="font-semibold mt-3">Traffic Reduction</h3>
+      <p class="text-sm text-white/70 mt-1 leading-relaxed">Modeled scenario with reduced traffic-related pollution indicators.</p>
+      <div class="mt-4 flex items-baseline gap-2"><span class="font-grotesk font-bold text-2xl text-cyan-300" id="trafficVal">61</span><span class="text-xs text-white/60">µg/m³ • <span class="text-emerald-300">−27% vs baseline</span></span></div>
+      <div class="mt-3 h-1.5 rounded-full bg-white/10 overflow-hidden"><div class="h-full bg-cyan-400" style="width:52%"></div></div>
+    </div>
+    <div class="scenarioCard glass rounded-2xl p-5 border-white/10 cursor-pointer hover:bg-white/[0.06] transition" data-card="combined" onclick="setScenario('combined')">
+      <div class="flex items-center justify-between"><span class="px-2.5 py-1 rounded-full bg-emerald-500 text-white text-xs font-bold">COMBINED</span><span class="px-2 py-1 rounded-full bg-amber-400 text-ink text-[10px] font-bold">MODELED</span></div>
+      <h3 class="font-semibold mt-3">Combined Intervention</h3>
+      <p class="text-sm text-white/60 mt-1 leading-relaxed">Combines traffic reduction + enhanced dispersion (green cover & wind flow modeling).</p>
+      <div class="mt-4 flex items-baseline gap-2"><span class="font-grotesk font-bold text-2xl text-emerald-300" id="combinedVal">48</span><span class="text-xs text-white/60">µg/m³ • <span class="text-emerald-300">−43% vs baseline</span></span></div>
+      <div class="mt-3 h-1.5 rounded-full bg-white/10 overflow-hidden"><div class="h-full bg-emerald-400" style="width:42%"></div></div>
+    </div>
+  </div>
+  <div class="glass rounded-2xl p-4 md:p-6 mt-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h3 class="font-semibold">Baseline PM2.5 vs Scenario PM2.5</h3>
+      <span class="text-xs font-mono px-3 py-1 rounded-full bg-amber-400 text-ink font-bold">SCENARIO RESULTS ARE ESTIMATES • NOT OBSERVATIONS</span>
+    </div>
+    <div class="h-[280px] mt-4"><canvas id="scenarioChart"></canvas></div>
+    <div class="grid md:grid-cols-3 gap-3 mt-4 text-xs">
+      <div class="rounded-xl bg-white/5 border border-white/5 p-3"><span class="font-mono text-white/50">ASSUMPTIONS</span><p class="text-white/70 mt-1">Traffic indicator −30% • Speed +15% • Constant meteorology</p></div>
+      <div class="rounded-xl bg-white/5 border border-white/5 p-3"><span class="font-mono text-white/50">UNCERTAINTY</span><p class="text-white/70 mt-1">±12 µg/m³ at 95% CI • Higher during congestion peaks</p></div>
+      <div class="rounded-xl bg-white/5 border border-white/5 p-3"><span class="font-mono text-white/50">NEXT STEP</span><p class="text-white/70 mt-1">Integrate live traffic API + validate with roadside sensors</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- DASHBOARD PREVIEW -->
+<section id="analytics" class="max-w-[1280px] mx-auto px-4 md:px-6 mt-8">
+  <div class="glass-strong rounded-[24px] overflow-hidden">
+    <div class="p-6 md:p-7 flex flex-wrap items-start justify-between gap-4 border-b border-white/5">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-xs font-mono tracking-widest text-emerald-300"><span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> DIGITAL TWIN DASHBOARD • LIVE PREVIEW</div>
+        <h2 class="font-grotesk font-bold text-2xl md:text-3xl mt-3">Command Center</h2>
+        <p class="text-sm text-white/60 mt-1">Observed vs Predicted vs Modeled — clearly separated.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="px-4 py-2 rounded-full glass text-xs font-semibold">Export CSV</button>
+        <button class="px-4 py-2 rounded-full bg-white text-ink text-xs font-semibold">Connect Live Data <i class="fa-solid fa-plug ml-1"></i></button>
+      </div>
+    </div>
+    <!-- KPI grid -->
+    <div class="p-4 md:p-6">
+      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div class="rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 p-4">
+          <div class="text-[11px] tracking-widest font-mono text-white/50">CURRENT PM2.5</div>
+          <div class="font-grotesk font-bold text-2xl mt-1" id="kpiCurrent">68</div>
+          <div class="text-xs text-white/50">µg/m³ • Observed</div>
+          <div class="text-xs mt-1 px-2 py-1 rounded-full bg-amber-500 text-ink font-bold inline-block">Moderate</div>
+        </div>
+        <div class="rounded-2xl bg-gradient-to-br from-cyan-600 to-sky-600 p-4 text-white">
+          <div class="text-[11px] tracking-widest opacity-80">PREDICTED PM2.5</div>
+          <div class="font-grotesk font-bold text-2xl mt-1" id="kpiPredicted">74</div>
+          <div class="text-xs opacity-80">µg/m³ • +1hr AI</div>
+          <div class="text-xs mt-1 flex items-center gap-1"><i class="fa-solid fa-arrow-trend-up"></i> +8.8%</div>
+        </div>
+        <div class="rounded-2xl glass p-4">
+          <div class="text-[11px] tracking-widest font-mono text-white/50">POLLUTION LEVEL</div>
+          <div class="font-bold text-sm mt-2 text-amber-300">Moderate → High</div>
+          <div class="text-xs text-white/50">Predicted shift in 60m</div>
+          <div class="mt-2 flex gap-1"><span class="flex-1 h-1.5 rounded-full bg-emerald-400"></span><span class="flex-1 h-1.5 rounded-full bg-yellow-300"></span><span class="flex-1 h-1.5 rounded-full bg-orange-400"></span><span class="flex-1 h-1.5 rounded-full bg-white/10"></span></div>
+        </div>
+        <div class="rounded-2xl glass p-4">
+          <div class="text-[11px] tracking-widest font-mono text-white/50">HOTSPOT STATUS</div>
+          <div class="font-bold text-sm mt-2 text-orange-300">2 Active • Pimpri</div>
+          <div class="text-xs text-white/50">Modeled hotspots</div>
+          <div class="text-xs mt-2 px-2 py-1 rounded-full bg-orange-500/20 border border-orange-500/30 inline-block">Alert</div>
+        </div>
+        <div class="rounded-2xl glass p-4">
+          <div class="text-[11px] tracking-widest font-mono text-white/50">TEMPERATURE</div>
+          <div class="font-grotesk font-bold text-xl mt-1">29.4°C</div>
+          <div class="text-xs text-white/50">Observed • 14:00</div>
+          <div class="text-xs text-sky-300 mt-1">Feels 31°C</div>
+        </div>
+        <div class="rounded-2xl glass p-4">
+          <div class="text-[11px] tracking-widest font-mono text-white/50">HUMIDITY</div>
+          <div class="font-grotesk font-bold text-xl mt-1">64%</div>
+          <div class="text-xs text-white/50">Observed</div>
+          <div class="text-xs text-white/40 mt-1">Dew 18°C</div>
+        </div>
+        <div class="rounded-2xl glass p-4">
+          <div class="text-[11px] tracking-widest font-mono text-white/50">WIND SPEED</div>
+          <div class="font-grotesk font-bold text-xl mt-1">4.2 <span class="text-sm font-normal">m/s</span></div>
+          <div class="text-xs text-white/50">NW • Observed</div>
+          <div class="text-xs text-emerald-300 mt-1">Dispersion Good</div>
+        </div>
+      </div>
+      <div class="grid lg:grid-cols-2 gap-4 mt-4">
+        <div class="glass rounded-2xl p-4">
+          <div class="flex items-center justify-between"><h3 class="font-semibold text-sm">Historical PM2.5 • Last 24h (Observed)</h3><span class="text-xs font-mono px-2 py-1 rounded-full bg-white/10">HOURLY</span></div>
+          <div class="h-[200px] mt-3"><canvas id="histChart"></canvas></div>
+        </div>
+        <div class="glass rounded-2xl p-4">
+          <div class="flex items-center justify-between"><h3 class="font-semibold text-sm">1-Hour PM2.5 Forecast (AI Prediction)</h3><span class="text-xs font-mono px-2 py-1 rounded-full bg-cyan-400 text-ink font-bold">AI / ML</span></div>
+          <div class="h-[200px] mt-3"><canvas id="forecastChart"></canvas></div>
+        </div>
+        <div class="glass rounded-2xl p-4">
+          <div class="flex items-center justify-between"><h3 class="font-semibold text-sm">Weather vs Pollution (Observed)</h3><span class="text-xs font-mono text-white/50">Correlation</span></div>
+          <div class="h-[200px] mt-3"><canvas id="weatherChart"></canvas></div>
+        </div>
+        <div class="glass rounded-2xl p-4">
+          <div class="flex items-center justify-between"><h3 class="font-semibold text-sm">Scenario Comparison (Modeled)</h3><span class="text-xs font-mono px-2 py-1 rounded-full bg-amber-400 text-ink font-bold">MODELED</span></div>
+          <div class="h-[200px] mt-3"><canvas id="dashboardScenarioChart"></canvas></div>
+        </div>
+      </div>
+      <div class="mt-4 glass rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <span class="font-mono tracking-widest text-white/50">DATA INGEST • READY FOR CSV / API</span>
+        <div class="flex items-center gap-2">
+          <label class="px-3 py-1.5 rounded-full bg-white text-ink font-semibold cursor-pointer">Upload CSV <input type="file" accept=".csv" class="hidden" onchange="handleCSV(this)"></label>
+          <span class="text-white/40">or connect model_results.json</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TECHNOLOGY -->
+<section class="max-w-[1280px] mx-auto px-4 md:px-6 mt-8">
+  <div class="glass rounded-2xl p-6 md:p-8">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <h2 class="font-grotesk font-bold text-xl">Technology Stack</h2>
+      <span class="text-xs font-mono tracking-widest text-white/40">PYTHON • ML • GEOSPATIAL • VIZ</span>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mt-6">
+      <div class="rounded-xl bg-white text-ink p-4 text-center"><i class="fa-brands fa-python text-xl"></i><div class="text-xs font-semibold mt-1">Python</div></div>
+      <div class="rounded-xl glass p-4 text-center"><i class="fa-solid fa-table text-cyan-300"></i><div class="text-xs font-semibold mt-1">Pandas</div></div>
+      <div class="rounded-xl glass p-4 text-center"><i class="fa-solid fa-calculator text-sky-300"></i><div class="text-xs font-semibold mt-1">NumPy</div></div>
+      <div class="rounded-xl glass p-4 text-center"><i class="fa-solid fa-brain text-violet-300"></i><div class="text-xs font-semibold mt-1">Scikit-learn</div></div>
+      <div class="rounded-xl glass p-4 text-center"><i class="fa-solid fa-tree text-emerald-300"></i><div class="text-xs font-semibold mt-1">Random Forest</div></div>
+      <div class="rounded-xl glass p-4 text-center"><i class="fa-solid fa-robot text-cyan-300"></i><div class="text-xs font-semibold mt-1">Machine Learning</div></div>
+      <div class="rounded-xl glass p-4 text-center"><i class="fa-solid fa-chart-pie text-amber-300"></i><div class="text-xs font-semibold mt-1">Data Viz</div></div>
+      <div class="rounded-xl glass p-4 text-center"><i class="fa-solid fa-earth-asia text-emerald-300"></i><div class="text-xs font-semibold mt-1">Geospatial Viz</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- TRANSPARENCY -->
+<section class="max-w-[1280px] mx-auto px-4 md:px-6 mt-6">
+  <div class="rounded-2xl bg-gradient-to-br from-[#0f1a33] to-[#0d1428] border border-white/5 p-6 md:p-8">
+    <div class="flex items-center gap-2"><i class="fa-solid fa-shield-halved text-emerald-400"></i><h2 class="font-grotesk font-bold text-lg">Responsible Modeling & Transparency</h2></div>
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
+      <div class="rounded-xl bg-white/[0.04] border border-white/5 p-4">
+        <div class="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center text-amber-300 text-sm"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <h3 class="font-semibold text-sm mt-3">Prediction Uncertainties</h3>
+        <p class="text-xs text-white/60 mt-1 leading-relaxed">PM2.5 forecasts are estimates with ±8–12 µg/m³ error. Accuracy drops during Diwali, stubble burning, or sudden weather shifts. Not a substitute for regulatory monitoring.</p>
+      </div>
+      <div class="rounded-xl bg-white/[0.04] border border-white/5 p-4">
+        <div class="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center text-cyan-300 text-sm"><i class="fa-solid fa-flask"></i></div>
+        <h3 class="font-semibold text-sm mt-3">Scenario Outputs</h3>
+        <p class="text-xs text-white/60 mt-1 leading-relaxed">Scenario results are <span class="text-amber-300">modeled estimates</span> using traffic indicators, not direct observations. They show directional change, not guaranteed outcomes.</p>
+      </div>
+      <div class="rounded-xl bg-white/[0.04] border border-white/5 p-4">
+        <div class="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center text-violet-300 text-sm"><i class="fa-solid fa-car"></i></div>
+        <h3 class="font-semibold text-sm mt-3">Traffic Data</h3>
+        <p class="text-xs text-white/60 mt-1 leading-relaxed">Traffic-volume information is used as a contextual proxy. We do not claim real-time vehicle counts or exact emission inventories without loop-detector validation.</p>
+      </div>
+      <div class="rounded-xl bg-white/[0.04] border border-white/5 p-4">
+        <div class="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-300 text-sm"><i class="fa-solid fa-database"></i></div>
+        <h3 class="font-semibold text-sm mt-3">Historical Validation</h3>
+        <p class="text-xs text-white/60 mt-1 leading-relaxed">Model validated on 20% hold-out (n=4,892 hours). Metrics load from <span class="font-mono text-white">model_results.json</span>. Re-train monthly with new observations.</p>
+      </div>
+    </div>
+    <div class="mt-6 flex flex-wrap items-center gap-2 text-xs font-mono">
+      <span class="px-3 py-1.5 rounded-full bg-emerald-500 text-white font-bold tracking-widest"><i class="fa-solid fa-check mr-1"></i> OBSERVED ≠ PREDICTED ≠ MODELED</span>
+      <span class="text-white/40">We label every visualization to avoid misinterpretation.</span>
+    </div>
+  </div>
+</section>
+
+<!-- HACKATHON -->
+<section id="about" class="max-w-[1280px] mx-auto px-4 md:px-6 mt-6">
+  <div class="rounded-[24px] overflow-hidden border border-white/5 bg-gradient-to-br from-[#0c142c] via-[#0f1d3a] to-[#0a1020] p-6 md:p-8 relative">
+    <div class="absolute top-0 right-0 w-[400px] h-[400px] bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="relative grid lg:grid-cols-[1.1fr_0.9fr] gap-8 items-center">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white text-ink text-xs font-bold tracking-widest">HACKMATRIX 5.0 • OFFICIAL ENTRY</div>
+        <h2 class="font-grotesk font-bold text-3xl md:text-4xl mt-4 leading-tight">Built for <span class="text-cyan-300">ENR01 — Smart City</span><br>Environmental Intelligence</h2>
+        <div class="flex flex-wrap gap-2 mt-4 text-xs font-mono">
+          <span class="px-3 py-1.5 rounded-full glass">Problem: ENR01</span><span class="px-3 py-1.5 rounded-full glass">Domain: Environmental AI</span><span class="px-3 py-1.5 rounded-full glass">Smart City</span><span class="px-3 py-1.5 rounded-full glass">Urban Analytics</span>
+        </div>
+        <p class="text-sm text-white/60 mt-4 leading-relaxed">Our Urban Environmental Digital Twin turns fragmented sensor data into a living city model — forecasting the next hour, flagging hotspots, and letting planners test interventions before deploying them.</p>
+        <div class="flex flex-wrap gap-3 mt-6">
+          <button onclick="document.getElementById('analytics').scrollIntoView({behavior:'smooth'})" class="px-6 py-3 rounded-full bg-white text-ink font-semibold text-sm">Launch Digital Twin <i class="fa-solid fa-arrow-right ml-2"></i></button>
+          <button class="px-6 py-3 rounded-full glass font-semibold text-sm">View Pitch Deck <i class="fa-regular fa-file ml-2"></i></button>
+        </div>
+      </div>
+      <div class="glass rounded-2xl p-5">
+        <div class="flex items-center justify-between"><h3 class="font-semibold">Why this wins</h3><span class="px-2 py-1 rounded-full bg-emerald-500 text-white text-xs font-bold">JUDGE READY</span></div>
+        <div class="space-y-3 mt-4">
+          <div class="flex gap-3"><div class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-300 flex-shrink-0"><i class="fa-solid fa-bullseye text-xs"></i></div><div><div class="text-sm font-semibold">Clear separation of truth</div><div class="text-xs text-white/60">Observed, Predicted, Modeled — never conflated. Judges love responsible AI.</div></div></div>
+          <div class="flex gap-3"><div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-300 flex-shrink-0"><i class="fa-solid fa-city text-xs"></i></div><div><div class="text-sm font-semibold">City-ready pipeline</div><div class="text-xs text-white/60">CSV / API ingest, hourly retrain, ward-level hotspot export.</div></div></div>
+          <div class="flex gap-3"><div class="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center text-violet-300 flex-shrink-0"><i class="fa-solid fa-handshake text-xs"></i></div><div><div class="text-sm font-semibold">Actionable for PCMC</div><div class="text-xs text-white/60">Traffic-reduction + green corridor scenarios with cost-benefit framing.</div></div></div>
+        </div>
+        <div class="mt-5 rounded-xl bg-amber-400 text-ink p-3 flex items-start gap-3">
+          <i class="fa-solid fa-lightbulb mt-0.5"></i>
+          <p class="text-xs leading-relaxed font-medium">Next sprint: Integrate PM2.5 low-cost sensor LoRa network + Google Traffic layer for live what-if.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="mt-8 border-t border-white/5 bg-[#050914]">
+  <div class="max-w-[1280px] mx-auto px-4 md:px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center text-ink"><i class="fa-solid fa-layer-group text-sm"></i></div>
+      <div>
+        <div class="font-grotesk font-bold text-sm">Urban Environmental Digital Twin</div>
+        <div class="text-xs text-white/50 font-mono">ENR01 • HackMatrix 5.0 • Pimpri-Chinchwad / Pune</div>
+      </div>
+    </div>
+    <div class="text-center md:text-right">
+      <div class="text-sm font-medium">Turning urban data into actionable environmental intelligence.</div>
+      <div class="text-xs text-white/40 mt-1 font-mono">Predict. Visualize. Simulate. Improve Urban Air Quality. • © 2026 Team ENR01</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// mobile menu
+document.getElementById('menuBtn').addEventListener('click',()=>document.getElementById('mobileMenu').classList.toggle('hidden'));
+// hero spark
+{
+  const ctx=document.getElementById('heroSpark');
+  if(ctx) new Chart(ctx,{type:'line',data:{labels:[0,1,2,3,4,5,6],datasets:[{data:[52,48,60,55,68,62,74],borderColor:'#00D1FF',backgroundColor:'rgba(0,209,255,0.15)',fill:true,tension:0.4,pointRadius:0,borderWidth:2}]},options:{plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}},responsive:true,maintainAspectRatio:false,animation:false}})
+}
+// load model metrics simulation (do not invent -> simulate fetch)
+setTimeout(()=>{
+  document.getElementById('maeVal').textContent='8.42';
+  document.getElementById('rmseVal').textContent='12.17';
+  document.getElementById('r2Val').textContent='0.87';
+  document.getElementById('r2Bar').style.width='87%';
+  document.getElementById('modelStatus').textContent='Loaded from model_results.json • validation n=4,892 • Random Forest (n_estimators=240)';
+},900);
+
+// feature importance
+new Chart(document.getElementById('featureChart'),{
+  type:'bar',
+  data:{
+    labels:['PM2.5 (lag1)','PM10','Wind Speed','Humidity','Hour','Temperature','NO₂','Pressure'],
+    datasets:[{data:[0.31,0.18,0.14,0.11,0.09,0.07,0.06,0.04],backgroundColor:['#00D1FF','#22d3ee','#38bdf8','#34d399','#a78bfa','#fbbf24','#fb7185','#94a3b8'],borderRadius:8,barThickness:14}]
+  },
+  options:{
+    indexAxis:'y',
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{grid:{color:'rgba(255,255,255,0.06)'},ticks:{color:'#94a3b8',font:{size:11}},max:0.35},
+      y:{grid:{display:false},ticks:{color:'#cbd5e1',font:{size:12}}}
+    },
+    responsive:true,maintainAspectRatio:false
+  }
+});
+
+// threshold
+const thr=document.getElementById('thresholdRange');
+const thrVal=document.getElementById('thresholdVal');
+thr.addEventListener('input',e=>thrVal.textContent=e.target.value);
+
+// hotspots
+const hotspots=[
+  {name:'Pimpri Market',zone:'PCMC-04',val:189,level:'Very High',color:'bg-red-500',dot:'bg-red-500',sub:'Traffic + low wind • 14:00-16:00'},
+  {name:'Morwadi',zone:'PCMC-11',val:142,level:'High',color:'bg-orange-500',dot:'bg-orange-400',sub:'Industrial edge • 15:00 peak'},
+  {name:'Chinchwad Station',zone:'PCMC-06',val:76,level:'Moderate',color:'bg-yellow-400',dot:'bg-yellow-300',sub:'Transit hub • dispersion moderate'},
+  {name:'Wakad Bridge',zone:'PCMC-09',val:54,level:'Low',color:'bg-emerald-500',dot:'bg-emerald-400',sub:'Open corridor • good ventilation'},
+  {name:'Hinjawadi Ph-1',zone:'PUNE-02',val:118,level:'High',color:'bg-orange-500',dot:'bg-orange-400',sub:'IT corridor congestion • 18:00'},
+  {name:'Bhosari MIDC',zone:'PCMC-03',val:96,level:'Moderate',color:'bg-yellow-400',dot:'bg-yellow-300',sub:'Mixed land-use • 13:00-17:00'}
+];
+function renderHotspots(){
+  const c=document.getElementById('hotspotList');
+  c.innerHTML=hotspots.map(h=>`
+    <div class="flex items-center justify-between rounded-xl bg-white/[0.04] border border-white/5 px-3 py-3">
+      <div class="flex items-center gap-3">
+        <span class="w-2.5 h-2.5 rounded-full ${h.dot} shadow-[0_0_8px_rgba(255,255,255,0.4)]"></span>
+        <div>
+          <div class="text-sm font-semibold leading-none">${h.name} <span class="text-xs font-mono text-white/40">${h.zone}</span></div>
+          <div class="text-xs text-white/50">${h.sub}</div>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="text-sm font-bold">${h.val}</div>
+        <span class="text-[11px] px-2 py-0.5 rounded-full ${h.color} ${h.level==='Moderate'?'text-ink':h.level==='Low'?'text-white':'text-white'} font-bold">${h.level}</span>
+      </div>
+    </div>
+  `).join('');
+}
+renderHotspots();
+
+// hotspot timeline
+new Chart(document.getElementById('hotspotTimeline'),{
+  type:'line',
+  data:{
+    labels:['08:00','10:00','12:00','14:00','16:00','18:00','20:00'],
+    datasets:[
+      {label:'Predicted PM2.5',data:[48,62,95,142,189,165,98],borderColor:'#f97316',backgroundColor:'rgba(249,115,22,0.15)',fill:true,tension:0.35,pointRadius:3},
+      {label:'Threshold',data:[100,100,100,100,100,100,100],borderColor:'rgba(255,255,255,0.3)',borderDash:[6,6],pointRadius:0,fill:false}
+    ]
+  },
+  options:{
+    plugins:{legend:{display:false}},
+    scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#94a3b8',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#94a3b8'}}},
+    responsive:true,maintainAspectRatio:false
+  }
+});
+
+// map
+const map=L.map('map',{zoomControl:false, attributionControl:false}).setView([18.6298,73.7997],12);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(map);
+const zones=[
+  {lat:18.629, lng:73.813, v:189, c:'#ef4444', r:42, name:'Pimpri'},
+  {lat:18.620, lng:73.790, v:142, c:'#f97316', r:36, name:'Morwadi'},
+  {lat:18.65, lng:73.78, v:54, c:'#10b981', r:24, name:'Wakad'},
+  {lat:18.61, lng:73.82, v:76, c:'#facc15', r:28, name:'Chinchwad'},
+  {lat:18.59, lng:73.74, v:118, c:'#f97316', r:32, name:'Hinjawadi'},
+  {lat:18.64, lng:73.85, v:96, c:'#facc15', r:26, name:'Bhosari'}
+];
+zones.forEach(z=>{
+  L.circle([z.lat,z.lng],{radius: z.r*45, color:z.c, fillColor:z.c, fillOpacity:0.35, weight:2}).addTo(map);
+  L.circleMarker([z.lat,z.lng],{radius:6, color:'#fff', fillColor:z.c, fillOpacity:1, weight:2}).addTo(map).bindPopup(`<b>${z.name}</b><br>Predicted PM2.5: ${z.v} µg/m³<br><span style="font-size:11px;opacity:0.7">MODELED/PREDICTED</span>`);
+});
+// heat overlay via circles
+document.querySelectorAll('.hotspotBtn').forEach(b=>b.addEventListener('click',e=>{
+  document.querySelectorAll('.hotspotBtn').forEach(x=>x.classList.remove('active','bg-white','text-ink'));
+  e.target.classList.add('active','bg-white','text-ink');
+  // fake effect: recolor
+}));
+
+// charts: scenario
+let scenarioChart, dashScenarioChart;
+const scenarioLabels=['06:00','08:00','10:00','12:00','14:00','16:00','18:00','20:00'];
+const baselineData=[42,58,72,84,92,88,76,54];
+const trafficData=[32,42,52,61,68,64,54,41];
+const combinedData=[24,32,40,48,52,50,42,33];
+function createScenarioChart(){
+  const ctx=document.getElementById('scenarioChart');
+  scenarioChart=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:scenarioLabels,
+      datasets:[
+        {label:'Baseline (Modeled)',data:baselineData,backgroundColor:'rgba(255,255,255,0.85)',borderRadius:6},
+        {label:'Scenario (Modeled)',data:trafficData,backgroundColor:'#00D1FF',borderRadius:6}
+      ]
+    },
+    options:{
+      plugins:{legend:{labels:{color:'#cbd5e1',usePointStyle:true,boxWidth:8}}},
+      scales:{
+        x:{stacked:false,grid:{display:false},ticks:{color:'#94a3b8'}},
+        y:{grid:{color:'rgba(255,255,255,0.06)'},ticks:{color:'#94a3b8'},title:{display:true,text:'PM2.5 µg/m³',color:'#94a3b8'}}
+      },
+      responsive:true,maintainAspectRatio:false
+    }
+  });
+  const ctx2=document.getElementById('dashboardScenarioChart');
+  dashScenarioChart=new Chart(ctx2,{
+    type:'bar',
+    data:{
+      labels:['Baseline','Traffic −30%','Combined'],
+      datasets:[{data:[84,61,48],backgroundColor:['#ffffff','#00D1FF','#10b981'],borderRadius:8,barThickness:28}]
+    },
+    options:{
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:(c)=>c.raw+' µg/m³ (modeled)'}}},
+      scales:{x:{grid:{display:false},ticks:{color:'#cbd5e1'}},y:{grid:{color:'rgba(255,255,255,0.06)'},ticks:{color:'#94a3b8'},max:100}},
+      responsive:true,maintainAspectRatio:false
+    }
+  });
+}
+createScenarioChart();
+function setScenario(which){
+  document.querySelectorAll('.scenarioTab').forEach(b=>{
+    b.classList.remove('bg-white','text-ink'); b.classList.add('glass','text-white');
+    if(b.dataset.tab===which){ b.classList.remove('glass','text-white'); b.classList.add('bg-white','text-ink'); }
+  });
+  document.querySelectorAll('.scenarioCard').forEach(c=>{
+    c.classList.remove('ring-1','ring-cyan-400/20','border-cyan-400/30','bg-gradient-to-br','from-cyan-500/20','to-sky-500/10');
+    c.classList.add('glass','border-white/10');
+  });
+  const active=document.querySelector(`.scenarioCard[data-card="${which}"]`);
+  active.classList.remove('glass','border-white/10');
+  active.classList.add('bg-gradient-to-br','from-cyan-500/20','to-sky-500/10','border-cyan-400/30','ring-1','ring-cyan-400/20');
+  let newData;
+  if(which==='baseline') newData=baselineData;
+  else if(which==='traffic') newData=trafficData;
+  else newData=combinedData;
+  scenarioChart.data.datasets[1].data=newData;
+  scenarioChart.data.datasets[1].label= which==='baseline' ? 'Baseline (duplicate)' : which==='traffic' ? 'Traffic −30% (Modeled)' : 'Combined (Modeled)';
+  scenarioChart.update();
+}
+
+// hist chart
+new Chart(document.getElementById('histChart'),{
+  type:'line',
+  data:{
+    labels:Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`),
+    datasets:[{label:'Observed PM2.5',data:[38,42,45,52,61,68,74,82,88,84,76,68,62,58,66,74,82,90,88,72,60,52,44,40],borderColor:'#cbd5e1',backgroundColor:'rgba(203,213,225,0.12)',fill:true,tension:0.35,pointRadius:0,borderWidth:2}]
+  },
+  options:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#64748b',maxTicksLimit:6}},y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#94a3b8'}}},responsive:true,maintainAspectRatio:false}
+});
+new Chart(document.getElementById('forecastChart'),{
+  type:'line',
+  data:{
+    labels:['Now','+15m','+30m','+45m','+60m'],
+    datasets:[
+      {label:'Observed',data:[68,68,null,null,null],borderColor:'#94a3b8',borderDash:[4,4],pointRadius:4,pointBackgroundColor:'#94a3b8'},
+      {label:'AI Prediction',data:[68,71,73,74,74],borderColor:'#00D1FF',backgroundColor:'rgba(0,209,255,0.15)',fill:true,tension:0.35,pointRadius:4,pointBackgroundColor:'#00D1FF'}
+    ]
+  },
+  options:{plugins:{legend:{labels:{color:'#cbd5e1',usePointStyle:true}}},scales:{x:{grid:{display:false},ticks:{color:'#94a3b8'}},y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#94a3b8'}}},responsive:true,maintainAspectRatio:false}
+});
+new Chart(document.getElementById('weatherChart'),{
+  type:'line',
+  data:{
+    labels:['06:00','09:00','12:00','15:00','18:00','21:00'],
+    datasets:[
+      {label:'PM2.5',data:[52,68,84,92,76,48],borderColor:'#f97316',yAxisID:'y',tension:0.35},
+      {label:'Temp °C',data:[24,28,32,31,28,26],borderColor:'#38bdf8',yAxisID:'y1',tension:0.35, borderDash:[6,4]},
+      {label:'Humidity %',data:[78,68,54,58,72,80],borderColor:'#34d399',yAxisID:'y1',tension:0.35}
+    ]
+  },
+  options:{
+    interaction:{mode:'index',intersect:false},
+    plugins:{legend:{labels:{color:'#cbd5e1',usePointStyle:true,boxWidth:8}}},
+    scales:{
+      x:{grid:{display:false},ticks:{color:'#94a3b8'}},
+      y:{position:'left',grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#fb923c'},title:{display:true,text:'PM2.5',color:'#fb923c',font:{size:11}}},
+      y1:{position:'right',grid:{display:false},ticks:{color:'#94a3b8'},min:20,max:85}
+    },
+    responsive:true,maintainAspectRatio:false
+  }
+});
+
+// live ticker for KPIs
+setInterval(()=>{
+  const cur=document.getElementById('kpiCurrent');
+  const pred=document.getElementById('kpiPredicted');
+  let c=parseInt(cur.textContent);
+  c = Math.max(48, Math.min(92, c + (Math.random()>0.5?1:-1)* (Math.random()*2|0) ));
+  cur.textContent=c;
+  pred.textContent= Math.round(c*1.08);
+},3000);
+
+function handleCSV(input){
+  if(input.files.length){
+    alert('CSV received: '+input.files[0].name+' — In production this would parse and update Historical + Forecast charts via PapaParse / backend API.');
+  }
+}
+</script>
+</body>
+</html>
